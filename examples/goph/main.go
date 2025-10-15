@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/melbahja/goph"
+	"github.com/ahmet2mir/goph"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"

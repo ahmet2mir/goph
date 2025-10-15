@@ -18,7 +18,8 @@ import (
 // Client represents Goph client.
 type Client struct {
 	*ssh.Client
-	Config *Config
+	Config       *Config
+	ClientConfig *ssh.ClientConfig
 }
 
 // Config for Client.
@@ -75,21 +76,21 @@ func NewConn(config *Config) (c *Client, err error) {
 
 	c = &Client{
 		Config: config,
+		ClientConfig: &ssh.ClientConfig{
+			User:            config.User,
+			Auth:            config.Auth,
+			Timeout:         config.Timeout,
+			HostKeyCallback: config.Callback,
+		},
 	}
 
-	c.Client, err = Dial("tcp", config)
+	c.Client, err = Dial("tcp", config, c.ClientConfig)
 	return
 }
 
 // Dial starts a client connection to SSH server based on config.
-func Dial(proto string, c *Config) (*ssh.Client, error) {
-	return ssh.Dial(proto, net.JoinHostPort(c.Addr, fmt.Sprint(c.Port)), &ssh.ClientConfig{
-		User:            c.User,
-		Auth:            c.Auth,
-		Timeout:         c.Timeout,
-		HostKeyCallback: c.Callback,
-		BannerCallback:  c.BannerCallback,
-	})
+func Dial(proto string, c *Config, cc *ssh.ClientConfig) (*ssh.Client, error) {
+	return ssh.Dial(proto, net.JoinHostPort(c.Addr, fmt.Sprint(c.Port)), cc)
 }
 
 // Run starts a new SSH session and runs the cmd, it returns CombinedOutput and err if any.
