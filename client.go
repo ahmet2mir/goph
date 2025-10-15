@@ -15,87 +15,53 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Client represents Goph client.
-type Client struct {
-	*ssh.Client
-	Config       *Config
+type Config struct {
+	Auth         Auth
+	Protocol     string
+	Addr         string
+	Port         uint
 	ClientConfig *ssh.ClientConfig
 }
 
-// Config for Client.
-type Config struct {
-	Auth           Auth
-	User           string
-	Addr           string
-	Port           uint
-	Timeout        time.Duration
-	Callback       ssh.HostKeyCallback
-	BannerCallback ssh.BannerCallback
+type Client struct {
+	*ssh.Client
+	Config *Config
 }
 
 // DefaultTimeout is the timeout of ssh client connection.
 var DefaultTimeout = 20 * time.Second
 
-// New starts a new ssh connection, the host public key must be in known hosts.
-func New(user string, addr string, auth Auth) (c *Client, err error) {
-
+func NewConfig(user string, addr string, port uint, auth Auth) (*Config, error) {
 	callback, err := DefaultKnownHosts()
-
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	c, err = NewConn(&Config{
-		User:     user,
+	return &Config{
+		Auth:     auth,
 		Addr:     addr,
 		Port:     22,
-		Auth:     auth,
-		Timeout:  DefaultTimeout,
-		Callback: callback,
-	})
-	return
-}
-
-// NewUnknown starts a ssh connection get client without cheking knownhosts.
-// PLEASE AVOID USING THIS, UNLESS YOU KNOW WHAT ARE YOU DOING!
-// if there a "man in the middle proxy", this can harm you!
-// You can add the key to know hosts and use New() func instead!
-func NewUnknown(user string, addr string, auth Auth) (*Client, error) {
-	return NewConn(&Config{
-		User:     user,
-		Addr:     addr,
-		Port:     22,
-		Auth:     auth,
-		Timeout:  DefaultTimeout,
-		Callback: ssh.InsecureIgnoreHostKey(),
-	})
-}
-
-// NewConn returns new client and error if any.
-func NewConn(config *Config) (c *Client, err error) {
-
-	c = &Client{
-		Config: config,
+		Protocol: "tcp",
 		ClientConfig: &ssh.ClientConfig{
-			User:            config.User,
-			Auth:            config.Auth,
-			Timeout:         config.Timeout,
-			HostKeyCallback: config.Callback,
+			User:            user,
+			Auth:            auth,
+			Timeout:         DefaultTimeout,
+			HostKeyCallback: callback,
 		},
-	}
-
-	c.Client, err = Dial("tcp", config, c.ClientConfig)
-	return
+	}, nil
 }
 
-// Dial starts a client connection to SSH server based on config.
-func Dial(proto string, c *Config, cc *ssh.ClientConfig) (*ssh.Client, error) {
-	return ssh.Dial(proto, net.JoinHostPort(c.Addr, fmt.Sprint(c.Port)), cc)
+func NewClient(c *Config) (*Client, error) {
+	client, err := ssh.Dial(c.Protocol, net.JoinHostPort(c.Addr, fmt.Sprint(c.Port)), c.ClientConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Client{Client: client, Config: c}, nil
 }
 
 // Run starts a new SSH session and runs the cmd, it returns CombinedOutput and err if any.
-func (c Client) Run(cmd string) ([]byte, error) {
-
+func (c *Client) Run(cmd string) ([]byte, error) {
 	var (
 		err  error
 		sess *ssh.Session
@@ -214,3 +180,4 @@ func (c Client) Download(remotePath string, localPath string) (err error) {
 
 	return local.Sync()
 }
+

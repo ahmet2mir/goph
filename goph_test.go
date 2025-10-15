@@ -63,14 +63,12 @@ func gophAuthTest(t *testing.T) {
 
 	newServer("2020")
 
-	_, err := goph.NewConn(&goph.Config{
-		Addr:     "127.0.10.10",
-		Port:     2020,
-		User:     "melbahja",
-		Auth:     goph.Password("123456"),
-		Callback: ssh.InsecureIgnoreHostKey(),
-	})
-
+	config, err := goph.NewConfig("melbahja", "127.0.10.10", 2020, goph.Password("123456"))
+	if err != nil {
+		t.Error(err)
+	}
+	config.ClientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+	_, err = goph.NewClient(config)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,14 +78,13 @@ func gophRunTest(t *testing.T) {
 
 	newServer("2021")
 
-	client, err := goph.NewConn(&goph.Config{
-		Addr:     "127.0.10.10",
-		Port:     2021,
-		User:     "melbahja",
-		Auth:     goph.Password("123456"),
-		Callback: ssh.InsecureIgnoreHostKey(),
-	})
+	config, err := goph.NewConfig("melbahja", "127.0.10.10", 2020, goph.Password("123456"))
+	if err != nil {
+		t.Error(err)
+	}
+	config.ClientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 
+	client, err := goph.NewClient(config)
 	if err != nil {
 		t.Errorf("connect error: %s", err)
 	}
@@ -103,15 +100,14 @@ func gophWrongPassTest(t *testing.T) {
 
 	newServer("2022")
 
-	_, err := goph.NewConn(&goph.Config{
-		Addr:     "127.0.10.10",
-		Port:     2022,
-		User:     "melbahja",
-		Auth:     goph.Password("12345"),
-		Callback: ssh.InsecureIgnoreHostKey(),
-	})
+	config, err := goph.NewConfig("melbahja", "127.0.10.10", 2020, goph.Password("123456"))
+	if err != nil {
+		t.Error(err)
+	}
+	config.ClientConfig.HostKeyCallback = ssh.InsecureIgnoreHostKey()
 
-	if err == nil {
+	_, err = goph.NewClient(config)
+	if err != nil {
 		t.Error("it should return an error")
 	}
 }

@@ -131,13 +131,13 @@ func main() {
 		panic(err)
 	}
 
-	client, err = goph.NewConn(&goph.Config{
-		User:     user,
-		Addr:     addr,
-		Port:     port,
-		Auth:     auth,
-		Callback: VerifyHost,
-	})
+	config, err := goph.NewConfig(user, addr, port, auth)
+	if err != nil {
+		panic(err)
+	}
+
+	config.ClientConfig.HostKeyCallback = VerifyHost
+	client, err = goph.NewClient(config)
 
 	if err != nil {
 		panic(err)
