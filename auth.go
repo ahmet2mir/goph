@@ -9,6 +9,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"bytes"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -80,6 +81,30 @@ func UseAgent() (Auth, error) {
 	return Auth{
 		ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers),
 	}, nil
+}
+
+// UseAgent auth via ssh agent, select specific key from all to avoid too many auth failures (Unix systems only)
+func UseAgentSelect(pubkey []byte) (Auth, error) {
+	sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
+	if err != nil {
+		return nil, fmt.Errorf("could not find ssh agent: %w", err)
+	}
+
+	signers, err := agent.NewClient(sshAgent).Signers()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get signers from agent: %w", err)
+	}
+
+	// Find the matching signer
+	for _, signer := range signers {
+		if bytes.Equal(signer.PublicKey().Marshal(), pubkey) {
+			// Return auth method with only this specific signer
+			return Auth{
+				ssh.PublicKeys(signer),
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("could not get key %s from agent", string(pubkey))
 }
 
 // GetSigner returns ssh signer from private key file.
