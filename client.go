@@ -40,7 +40,7 @@ func NewConfig(user string, addr string, port uint, auth Auth) (*Config, error) 
 	return &Config{
 		Auth:     auth,
 		Addr:     addr,
-		Port:     22,
+		Port:     port,
 		Protocol: "tcp",
 		ClientConfig: &ssh.ClientConfig{
 			User:            user,
